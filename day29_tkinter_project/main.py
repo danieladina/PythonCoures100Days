@@ -1,108 +1,115 @@
 from tkinter import *
-import math
-# ---------------------------- CONSTANTS ------------------------------- #
-PINK = "#e2979c"
-RED = "#e7305b"
-GREEN = "#9bdeac"
-YELLOW = "#f7f5dd"
-FONT_NAME = "Courier"
-WORK_MIN = 1
-SHORT_BREAK_MIN = 5
-LONG_BREAK_MIN = 20
-reps = 0
-timer = None
+from tkinter import messagebox
+from random import choice, randint, shuffle
+import pyperclip
+import json
 
-# ---------------------------- TIMER RESET ------------------------------- # 
+# ---------------------------- PASSWORD GENERATOR ------------------------------- #
 
-def reset_timer():
-    window.after_cancel(timer)
-    canvas.itemconfig(timer_text, text="00:00")
-    title_label.config(text="Timer")
-    check_marks.config(text="")
-    global reps
-    reps = 0
+#Password Generator Project
+def generate_password():
+    letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+    numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    symbols = ['!', '#', '$', '%', '&', '(', ')', '*', '+']
 
+    password_letters = [choice(letters) for _ in range(randint(8, 10))]
+    password_symbols = [choice(symbols) for _ in range(randint(2, 4))]
+    password_numbers = [choice(numbers) for _ in range(randint(2, 4))]
 
-# ---------------------------- TIMER MECHANISM ------------------------------- # 
+    password_list = password_letters + password_symbols + password_numbers
+    shuffle(password_list)
 
-def start_timer():
-    global reps
-    reps += 1
+    password = "".join(password_list)
+    password_entry.insert(0, password)
+    pyperclip.copy(password)
 
-    work_sec = WORK_MIN * 60
-    short_break_sec = SHORT_BREAK_MIN * 60
-    long_break_sec = LONG_BREAK_MIN * 60
+# ---------------------------- SAVE PASSWORD ------------------------------- #
+def save():
 
-    if reps % 8 == 0:
-        count_down(long_break_sec)
-        title_label.config(text="Break", fg=RED)
-    elif reps % 2 == 0:
-        count_down(short_break_sec)
-        title_label.config(text="Break", fg=PINK)
+    website = website_entry.get()
+    email = email_entry.get()
+    password = password_entry.get()
+    new_data = {
+        website: {
+            "email": email,
+            "password": password,
+        }
+    }
+
+    if len(website) == 0 or len(password) == 0:
+        messagebox.showinfo(title="Oops", message="Please make sure you haven't left any fields empty.")
     else:
-        count_down(work_sec)
-        title_label.config(text="Work", fg=GREEN)
+        try:
+            with open("data.json", "r") as data_file:
+                #Reading old data
+                data = json.load(data_file)
+        except FileNotFoundError:
+            with open("data.json", "w") as data_file:
+                json.dump(new_data, data_file, indent=4)
+        else:
+            #Updating old data with new data
+            data.update(new_data)
+
+            with open("data.json", "w") as data_file:
+                #Saving updated data
+                json.dump(data, data_file, indent=4)
+        finally:
+            website_entry.delete(0, END)
+            password_entry.delete(0, END)
 
 
-# ---------------------------- COUNTDOWN MECHANISM ------------------------------- #
-def count_down(count):
-
-    count_min = math.floor(count / 60)
-    count_sec = count % 60
-    if count_sec < 10:
-        count_sec = f"0{count_sec}"
-
-    canvas.itemconfig(timer_text, text=f"{count_min}:{count_sec}")
-    if count > 0:
-        global timer
-        timer = window.after(1000, count_down, count - 1)
+# ---------------------------- FIND PASSWORD ------------------------------- #
+def find_password():
+    website = website_entry.get()
+    try:
+        with open("data.json") as data_file:
+            data = json.load(data_file)
+    except FileNotFoundError:
+        messagebox.showinfo(title="Error", message="No Data File Found.")
     else:
-        start_timer()
-        marks = ""
-        work_sessions = math.floor(reps/2)
-        for _ in range(work_sessions):
-            marks += "✔"
-        check_marks.config(text=marks)
+        if website in data:
+            email = data[website]["email"]
+            password = data[website]["password"]
+            messagebox.showinfo(title=website, message=f"Email: {email}\nPassword: {password}")
+        else:
+            messagebox.showinfo(title="Error", message=f"No details for {website} exists.")
 
 
 # ---------------------------- UI SETUP ------------------------------- #
+
 window = Tk()
-window.title("Pomodoro")
-window.config(padx=100, pady=50, bg=YELLOW)
+window.title("Password Manager")
+window.config(padx=50, pady=50)
 
+canvas = Canvas(height=200, width=200)
+logo_img = PhotoImage(file="logo.png")
+canvas.create_image(100, 100, image=logo_img)
+canvas.grid(row=0, column=1)
 
-title_label = Label(text="Timer", fg=GREEN, bg=YELLOW, font=(FONT_NAME, 50))
-title_label.grid(column=1, row=0)
+#Labels
+website_label = Label(text="Website:")
+website_label.grid(row=1, column=0)
+email_label = Label(text="Email/Username:")
+email_label.grid(row=2, column=0)
+password_label = Label(text="Password:")
+password_label.grid(row=3, column=0)
 
-canvas = Canvas(width=200, height=224, bg=YELLOW, highlightthickness=0)
-tomato_img = PhotoImage(file="tomato.png")
-canvas.create_image(100, 112, image=tomato_img)
-timer_text = canvas.create_text(100, 130, text="00:00", fill="white", font=(FONT_NAME, 35, "bold"))
-canvas.grid(column=1, row=1)
+#Entries
+website_entry = Entry(width=21)
+website_entry.grid(row=1, column=1)
+website_entry.focus()
+email_entry = Entry(width=35)
+email_entry.grid(row=2, column=1, columnspan=2)
+email_entry.insert(0, "daniel.adinayev@gmail.com")
+password_entry = Entry(width=21)
+password_entry.grid(row=3, column=1)
 
-start_button = Button(text="Start", highlightthickness=0, command=start_timer)
-start_button.grid(column=0, row=2)
-
-reset_button = Button(text="Reset", highlightthickness=0, command=reset_timer)
-reset_button.grid(column=2, row=2)
-
-check_marks = Label(fg=GREEN, bg=YELLOW)
-check_marks.grid(column=1, row=3)
-
-
-
-
-
+# Buttons
+search_button = Button(text="Search", width=13, command=find_password)
+search_button.grid(row=1, column=2)
+generate_password_button = Button(text="Generate Password", command=generate_password)
+generate_password_button.grid(row=3, column=2)
+add_button = Button(text="Add", width=36, command=save)
+add_button.grid(row=4, column=1, columnspan=2)
 
 window.mainloop()
-
-
-
-
-
-
-
-
-
-
-
