@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 
 
-#scripting from URL     -     https://news.ycombinator.com/
+#scraping from URL     -     https://news.ycombinator.com/
 
 
 response = requests.get("https://news.ycombinator.com/news")
